@@ -19,8 +19,6 @@ private:
 
     double across_probability, mutate_probobility;//½»²æ¸ÅÂÊ
 
-    double mx_x, mx;
-
     p_fun f, fit;
 
     int get_binary_digit(int x,int k);
@@ -37,6 +35,8 @@ private:
 
     void select(int population[]);
 
+	void across2(int &p1, int &p2);
+	
 public:
     Genetic(){}
     Genetic(double left, double right, double eps, int n, p_fun f, p_fun fit, double p1, double p2):
@@ -46,7 +46,6 @@ public:
         code_length = ceil(length);
         if(std::abs(length-code_length)<1e-8) ++code_length;
         actual_eps = (right - left) / ( ( 1 << code_length ) - 1);
-        mx = -1e9;
         srand(time(0));
     }
 
@@ -85,26 +84,34 @@ void Genetic::create_initial_population(int population[])
         population[i]=rand()%(1<<code_length);
 }
 
+void Genetic::across2(int &p1, int &p2)
+{
+	int k = rand()%code_length + 1;
+    int x = (1<<k) - 1;
+    int y = (1<<code_length) - 1;
+    //output_binary(p1);printf(" p1\n");
+    //output_binary(p2);printf(" p2\n");
+    y ^= x;
+    p1 &= y;
+    p1 |= p2&x;
+    //output_binary(p1);printf(" ++p1\n");
+    //output_binary(p2);printf(" ++p2\n");
+}
+
 void Genetic::across(int population[])
 {
-    int j, k, x, y, t;
-    double p;
+    int j, k, t;
+    double x, y, p;
     for(int i=0;i<n;++i)
     {
+    	j = i + 1;
+        if( j == n ) j = 0;
+    	x=decode(population[i]);y=decode(population[j]);
+        if(fit(x)>fit(y)) std::swap(population[i],population[j]);
         p = rand() / (RAND_MAX + 1.0);
         if(p>across_probability) continue;
-        j = i + 1;
-        if( j == n ) j = 0;
-        k = rand()%code_length + 1;
-        x = (1<<k) - 1;
-        y = (1<<code_length) - 1;
-        y ^= x;
-        t = population[i]&x;
-        population[i] &= y;
-        population[i] |= population[j]&x;
-        population[j] &= y;
-        population[j] |= t;
-    }
+        across2(population[i],population[j]);
+	}
 }
 
 void Genetic::select(int population[])
@@ -118,10 +125,6 @@ void Genetic::select(int population[])
         f_value[i] = f(x);
         fit_value[i] = fit(x);
         if(i) fit_value[i]+=fit_value[i-1];
-        if(f_value[i]>mx)
-        {
-            mx=f_value[i];mx_x=x;
-        }
     }
     for(int i=0;i<n;++i) fit_value[i] /= fit_value[n-1];
     for(int i=0;i<n;++i)
@@ -144,10 +147,6 @@ void Genetic::mutate(int population[])
         population[i] ^= 1<<k;
         x = decode(population[i]);
         f_value = f(x);
-        if(f_value>mx)
-        {
-            mx=f_value;mx_x=x;
-        }
     }
 }
 
@@ -157,13 +156,63 @@ double Genetic::evolve(int m)
     double f_value[n], fit_value[n];
     double x, p;
     create_initial_population(population);
-    while(m--)
+    int cnt=0;
+	while(m--)
     {
         across(population);
-        select(population);
-        mutate(population);
+        //select(population);
+        //mutate(population);
+        for(int i=0;i<code_length;++i)
+        {
+        	bool flag=true;
+        	for(int j=1;j<n;++j)
+				if(((population[j]^population[j-1])>>i)&1)
+				{
+        			flag=false;break;
+				}
+			if(flag)
+			{
+				int k=rand()%n;
+				int z=0;
+				double f_max=fit(decode(population[z])),ff;
+				for(int j=1;j<n;++j)
+				{
+					ff=fit(decode(population[j]));
+					if(ff>f_max)
+					{
+						f_max=ff;z=j;
+					}
+				}
+				z+=1+rand()%(n-1);
+				if(z>n) z-=n;
+				population[z]^=1<<i;
+			}
+		}
+		++cnt;
+        printf("(%d)\n",cnt);
+        for(int i=0;i<n;++i)
+        {
+        	double x=decode(population[i]);
+        	printf("%d ",i);
+        	printf(" %.3f ",x); 
+        	output_binary(population[i]);
+        	printf(" %.8f",fit(x));
+        	printf(" %.8f\n",f(x));
+		}
+		printf("--------------------\n");
     }
-    return mx_x;
+    double mx_x, mx_f=-1e12, ff;
+    for(int i=0;i<n;++i)
+    {
+    	x=decode(population[i]);
+    	ff=f(x);
+    	if(ff>mx_f)
+    	{
+    		mx_f=ff;
+    		mx_x=x;
+		}
+	}
+	return mx_x;
 }
 
 void Genetic::debug(int code)
@@ -175,7 +224,7 @@ void Genetic::debug(int code)
 double f(double x)
 {
     return x * cos(x);
-//    return x*(100000-x);
+    //return x*x/10.0;
 }
 
 double fit(double x)
@@ -185,11 +234,11 @@ double fit(double x)
 int main()
 {
     //printf("%.2f  ??\n",acos(-1)/2.0);
-    printf("%.8f  !!!\n",f(acos(-1)/4.0));
-    Genetic a = Genetic(0, acos(-1)/4.0, 0.01, 30, f, fit, 0.65, 0.001);
+    Genetic a = Genetic(0, acos(-1)/4.0, 0.01, 4, f, fit, 0.65, 0.00001);
 //    printf("%.8f  !!!\n",f(50000));
-//    Genetic a = Genetic(0, 100000, 0.01, 100, f, fit, 0.65, 0.001);
-    printf("%.8f \n", f(a.evolve(100)));
+    //Genetic a = Genetic(0, 100000, 0.01, 100, f, fit, 0.65, 0.001);
+    printf("%.8f \n", f(a.evolve(30)));
+    printf("%.8f  !!!\n",f(acos(-1)/4.0));
     //a.debug(1);
     return 0;
 }
