@@ -127,7 +127,7 @@ void Genetic::select(int population[])
     for(int i=0;i<n;++i)
     {
         p = rand() / (RAND_MAX + 1.0);
-        int k = std::lower_bound(population, population+n, p) - population;
+        int k = std::lower_bound(fit_value, fit_value+n, p) - fit_value;
         a[i] = population[k];
     }
     for(int i=0;i<n;++i) population[i] = a[i];
@@ -175,6 +175,7 @@ void Genetic::debug(int code)
 double f(double x)
 {
     return x * cos(x);
+//    return x*(100000-x);
 }
 
 double fit(double x)
@@ -185,8 +186,10 @@ int main()
 {
     //printf("%.2f  ??\n",acos(-1)/2.0);
     printf("%.8f  !!!\n",f(acos(-1)/4.0));
-    Genetic a = Genetic(0, acos(-1)/4.0, 0.01, 300, f, fit, 0.8, 0.008);
-    printf("%.8f \n", f(a.evolve(1000)));
+    Genetic a = Genetic(0, acos(-1)/4.0, 0.01, 30, f, fit, 0.65, 0.001);
+//    printf("%.8f  !!!\n",f(50000));
+//    Genetic a = Genetic(0, 100000, 0.01, 100, f, fit, 0.65, 0.001);
+    printf("%.8f \n", f(a.evolve(100)));
     //a.debug(1);
     return 0;
 }
