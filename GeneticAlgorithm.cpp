@@ -138,9 +138,20 @@ void Genetic::select(int population[])
 
 void Genetic::mutate(int population[])
 {
-    double p, x, f_value;
+    double p, x, f_value, mx_f=-1e12, mx_id;
     for(int i=0;i<n;++i)
     {
+    	x=decode(population[i]);
+    	f_value=f(x);
+    	if(f_value>mx_f)
+    	{
+    		mx_f=f_value;
+    		mx_id=i;
+		}
+	}
+    for(int i=0;i<n;++i)
+    {
+    	if(i==mx_id) continue;
         p = rand() / (RAND_MAX + 1.0);
         if(p>mutate_probobility) continue;
         int k = rand()%code_length;
@@ -188,7 +199,7 @@ double Genetic::evolve(int m)
 				population[z]^=1<<i;
 			}
 		}
-		++cnt;
+		/*++cnt;
         printf("(%d)\n",cnt);
         for(int i=0;i<n;++i)
         {
@@ -199,7 +210,7 @@ double Genetic::evolve(int m)
         	printf(" %.8f",fit(x));
         	printf(" %.8f\n",f(x));
 		}
-		printf("--------------------\n");
+		printf("--------------------\n");*/
     }
     double mx_x, mx_f=-1e12, ff;
     for(int i=0;i<n;++i)
@@ -234,10 +245,10 @@ double fit(double x)
 int main()
 {
     //printf("%.2f  ??\n",acos(-1)/2.0);
-    Genetic a = Genetic(0, acos(-1)/4.0, 0.01, 4, f, fit, 0.65, 0.00001);
+    Genetic a = Genetic(0, acos(-1)/4.0, 0.01, 20, f, fit, 0.7, 0.001);
 //    printf("%.8f  !!!\n",f(50000));
     //Genetic a = Genetic(0, 100000, 0.01, 100, f, fit, 0.65, 0.001);
-    printf("%.8f \n", f(a.evolve(30)));
+    printf("%.8f \n", f(a.evolve(100)));
     printf("%.8f  !!!\n",f(acos(-1)/4.0));
     //a.debug(1);
     return 0;
